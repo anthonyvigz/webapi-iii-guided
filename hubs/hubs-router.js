@@ -5,6 +5,11 @@ const Messages = require('../messages/messages-model.js');
 
 const router = express.Router();
 
+router.use((req, res, next) => {
+  console.log('We are in the hubs router!');
+  next();
+})
+
 // this only runs if the url has /api/hubs in it
 router.get('/', (req, res) => {
   Hubs.find(req.query)
@@ -40,7 +45,7 @@ router.get('/:id', (req, res) => {
   });
 });
 
-router.post('/', (req, res) => {
+router.post('/', requiredBody, (req, res) => {
   Hubs.add(req.body)
   .then(hub => {
     res.status(201).json(hub);
@@ -72,7 +77,7 @@ router.delete('/:id', (req, res) => {
   });
 });
 
-router.put('/:id', (req, res) => {
+router.put('/:id', [validateId, requiredBody], (req, res) => {
   Hubs.update(req.params.id, req.body)
   .then(hub => {
     if (hub) {
@@ -122,5 +127,31 @@ router.post('/:id/messages', (req, res) => {
     });
   });
 });
+
+function validateId(req, res, next) {
+  const { id } = req.params;
+
+  Hubs.findById(id)
+  .then(hub => {
+    if (hub) {
+      next();
+    } else {
+      res.status(404).json({ message: 'No hub with given id' })
+    }
+  })
+  .catch(error => {
+    res.status(500).json({ 
+      message: 'Error processing request'
+    })
+  })
+}
+
+function requiredBody(req, res, next) {
+  if (req.body && Object.keys(req.body).length > 0) {
+    next();
+  } else {
+    res.status(400).json({ message: 'No body provided' })
+  }
+}
 
 module.exports = router;
